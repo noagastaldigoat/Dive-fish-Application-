@@ -7,7 +7,8 @@
     "dev": "tsx watch dev-server.ts",
     "start": "tsx dev-server.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:web": "cd ../mobile && npm ci && npx expo export --platform web --output-dir ../server/public"
   },
   "dependencies": {
     "suncalc": "^2.1.4"

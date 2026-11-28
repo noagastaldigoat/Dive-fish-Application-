@@ -1,12 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Spot, SpotConditions } from './types';
 
+import { Platform } from 'react-native';
+
+/** The live API on Vercel. */
+export const PRODUCTION_API_URL = 'https://dive-fish-application-server.vercel.app';
+
 /**
- * Where the conditions API lives. Locally: `cd server && npm run dev`.
- * On a phone using Expo Go, set EXPO_PUBLIC_API_URL to your computer's LAN
- * address (e.g. http://192.168.1.20:3001). In production: the Vercel URL.
+ * Where the conditions API lives.
+ * - EXPO_PUBLIC_API_URL wins if set (e.g. http://192.168.1.20:3001 to test a local server from a phone).
+ * - Web: same site as the page (the web app is served by the API's Vercel project),
+ *   except on localhost, where the local server runs on port 3001.
+ * - iPhone/Android: the live Vercel API.
  */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001';
+function resolveApiUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  if (Platform.OS === 'web') {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    return host === 'localhost' || host === '127.0.0.1' ? 'http://localhost:3001' : '';
+  }
+  return PRODUCTION_API_URL;
+}
+
+export const API_URL = resolveApiUrl();
 
 export interface Loaded<T> {
   data: T;

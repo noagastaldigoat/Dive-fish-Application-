@@ -1,5 +1,5 @@
 import type { FeedResult, Reading, Spot, SpotConditions, TideEvent } from './types.js';
-import { BUOY_STALE_HOURS, buoySource, fetchBuoy, type BuoyObservation } from './feeds/ndbc.js';
+import { BUOY_STALE_HOURS, fetchBuoy, type BuoyObservation } from './feeds/ndbc.js';
 import { TIDE_STALE_HOURS, fetchTidePredictions, fetchWaterLevel, tideSource, type WaterLevel } from './feeds/tides.js';
 import { estimateClarity } from './clarity.js';
 import { sunMoon } from './astro.js';
@@ -56,8 +56,9 @@ function waveReading(
 }
 
 export async function buildConditions(spot: Spot, now = new Date(), feeds: Feeds = liveFeeds): Promise<SpotConditions> {
-  const [buoy, tides, level] = await Promise.all([feeds.buoy(spot.buoyId, now), feeds.tides(now), feeds.waterLevel(now)]);
-  const warnings: string[] = [];
+  const [picked, tides, level] = await Promise.all([pickBuoy(spot, now, feeds), feeds.tides(now), feeds.waterLevel(now)]);
+  const buoy = picked.feed;
+  const warnings: string[] = [...picked.warnings];
 
   // ---- Swell -------------------------------------------------------------
   const obs = buoy.data;
@@ -80,7 +81,7 @@ export async function buildConditions(spot: Spot, now = new Date(), feeds: Feeds
       value: null,
       display: 'Unknown',
       kind: 'estimate',
-      source: { name: 'Estimated by this app from buoy swell', url: buoySource(spot.buoyId).url },
+      source: { name: 'Estimated by this app from buoy swell', url: buoy.source.url },
       observedAt: obs.observedAt,
       stale: true,
       ageHours: buoyAge,
@@ -93,7 +94,7 @@ export async function buildConditions(spot: Spot, now = new Date(), feeds: Feeds
       value: est,
       display: est.rating,
       kind: 'estimate',
-      source: { name: 'Estimated by this app from buoy swell', url: buoySource(spot.buoyId).url },
+      source: { name: 'Estimated by this app from buoy swell', url: buoy.source.url },
       observedAt: obs.observedAt,
       stale: buoyStale,
       ageHours: buoyAge,
@@ -133,6 +134,28 @@ export async function buildConditions(spot: Spot, now = new Date(), feeds: Feeds
     },
     warnings,
     disclaimer: DISCLAIMER,
+  };
+}
+
+/**
+ * Use the spot's own buoy when it is fresh; otherwise the first fresh backup;
+ * otherwise whatever we have (the app then shows it as old data).
+ */
+async function pickBuoy(spot: Spot, now: Date, feeds: Feeds) {
+  const isFresh = (f: FeedResult<BuoyObservation>) =>
+    f.status === 'ok' && !!f.data && (ageHours(f.data.observedAt, now) ?? Infinity) <= BUOY_STALE_HOURS;
+  const main = await feeds.buoy(spot.buoyId, now);
+  if (isFresh(main) || spot.backupBuoyIds.length === 0) return { feed: main, warnings: [] as string[] };
+
+  const backups = await Promise.all(spot.backupBuoyIds.map((id) => feeds.buoy(id, now)));
+  const backup = backups.find(isFresh);
+  if (!backup) return { feed: main, warnings: [] as string[] };
+  const why = main.data ? `last reported ${formatAge(ageHours(main.data.observedAt, now))} ago` : 'is offline';
+  return {
+    feed: backup,
+    warnings: [
+      `${main.source.name} ${why}. Swell below is from ${backup.source.name} instead, which only roughly matches this spot.`,
+    ],
   };
 }
 

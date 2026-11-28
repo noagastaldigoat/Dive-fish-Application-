@@ -54,6 +54,8 @@ export interface Spot {
   lon: number;
   /** NDBC id of the wave buoy that best represents swell reaching this spot. */
   buoyId: string;
+  /** Buoys to fall back on, in order, when buoyId is offline or stale. Less representative. */
+  backupBuoyIds: string[];
   /** Compass directions (deg true) of open ocean this spot is exposed to. */
   exposure: { from: number; to: number };
   /** Short local-knowledge notes shown on the spot page. */

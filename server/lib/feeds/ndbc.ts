@@ -16,6 +16,10 @@ import { compassToDeg, fetchText } from '../util.js';
 export const BUOYS: Record<string, { name: string; cdip: string }> = {
   '51205': { name: 'Pauwela buoy, Maui', cdip: '187' },
   '51213': { name: 'Lanai Southwest buoy', cdip: '239' },
+  // Backups on other islands
+  '51201': { name: 'Waimea Bay buoy, Oahu', cdip: '106' },
+  '51202': { name: 'Mokapu Point buoy, Oahu', cdip: '098' },
+  '51211': { name: 'Pearl Harbor buoy, Oahu', cdip: '233' },
 };
 
 /** A Waverider reports every 30 min; older than this and we call it stale. */

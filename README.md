@@ -1,5 +1,7 @@
 # Maui Dive & Fish
 
+**Live:** https://dive-fish-application-server.vercel.app (web app) · API at `/api/spots` and `/api/conditions?spot=olowalu`
+
 Fishing and diving conditions for Maui spots, in one place: water clarity (estimate), swell, tides, sun and moon, with wind, runoff and 7-day history coming next.
 
 **Product rules the code follows**
@@ -14,14 +16,14 @@ Fishing and diving conditions for Maui spots, in one place: water clarity (estim
 | Folder | What it is |
 | --- | --- |
 | `mobile/` | The app. React Native + Expo (Expo Router), TypeScript. Runs on iPhone, Android and web. |
-| `server/` | The conditions API. Fetches and normalises NOAA data. Runs locally with `npm run dev`; deploys to Vercel as-is (`server/api/*.ts`). |
+| `server/` | The conditions API. Fetches and normalises NOAA data. Runs locally with `npm run dev`. On Vercel (Root Directory `server`) it also builds and serves the web version of the app (`npm run build:web`, see `server/vercel.json`). |
 | `supabase/` | Database schema for cached readings and the 7-day history (not wired up yet). |
 
 ## Data sources (all free, public)
 
 | Data | Source | Kind |
 | --- | --- | --- |
-| Swell (primary + wind swell) | NDBC 51205 Pauwela, Maui (CDIP 187) · NDBC 51213 Lanai Southwest (CDIP 239) | Measured, every 30 min |
+| Swell (primary + wind swell) | NDBC 51205 Pauwela, Maui · NDBC 51213 Lanai Southwest. Both were offline in Nov 2026, so the API falls back to Oahu buoys (51201 Waimea, 51202 Mokapu, 51211 Pearl Harbor) and says so on screen. | Measured, every 30 min |
 | Tide highs/lows | NOAA CO-OPS Kahului Harbor 1615680 | Forecast |
 | Water level now | NOAA CO-OPS Kahului Harbor 1615680 | Measured, every 6 min |
 | Sunrise, sunset, moon | Calculated on the server (suncalc) | Calculated |

@@ -114,6 +114,34 @@ describe('buildConditions', () => {
   });
 });
 
+describe('backup buoys', () => {
+  const now = new Date('2026-11-28T06:30:00Z');
+  const obs = { ...parseStandard(fx('51205.txt'))!, ...parseSpec(fx('51205.spec'))! };
+  const base: Omit<Feeds, 'buoy'> = {
+    tides: async () => ({ status: 'ok', data: [], source: { name: 't', url: '' }, fetchedAt: '' }),
+    waterLevel: async () => ({ status: 'unavailable', data: null, source: { name: 'w', url: '' }, fetchedAt: '' }),
+  };
+  it('switches to the first fresh backup and says so', async () => {
+    const fresh: Record<string, string> = { '51205': '2026-10-13T18:56:00.000Z', '51201': '2026-11-28T06:26:00.000Z', '51202': '2026-11-28T06:26:00.000Z' };
+    const c = await buildConditions(getSpot('honolua')!, now, {
+      ...base,
+      buoy: async (id) => ({ status: 'ok', data: { ...obs, observedAt: fresh[id] }, source: { name: `NDBC ${id}`, url: '' }, fetchedAt: '' }),
+    });
+    expect(c.swell.primary!.source.name).toBe('NDBC 51201');
+    expect(c.swell.primary!.stale).toBe(false);
+    expect(c.clarity!.value).not.toBeNull();
+    expect(c.warnings[0]).toMatch(/NDBC 51205 last reported 45 days ago\. Swell below is from NDBC 51201 instead/);
+  });
+  it('keeps the spot buoy when no backup is fresh either', async () => {
+    const c = await buildConditions(getSpot('makena')!, now, {
+      ...base,
+      buoy: async (id) => ({ status: 'unavailable', data: null, source: { name: `NDBC ${id}`, url: '' }, fetchedAt: '' }),
+    });
+    expect(c.swell.primary).toBeNull();
+    expect(c.warnings[0]).toMatch(/NDBC 51213 is not reporting/);
+  });
+});
+
 describe('cache', () => {
   it('serves the last good value when a feed goes down', async () => {
     clearCache();
